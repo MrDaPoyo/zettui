@@ -1,0 +1,78 @@
+/* 
+ * Some code has been written following the "Build Your Own Text Editor" (BYOTE) guide.
+ * Available at https://viewsourcecode.org/snaptoken/kilo
+ * I am grateful to the creators of the booklet.
+ *
+ * All comments are mine, writing a bit helps me remember stuff better.
+ */
+
+// --- INCLUDES ---
+
+#include <ctype.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <termios.h>
+#include <unistd.h>
+
+struct termios orig_termios;
+
+// --- TERMINAL ---
+
+/* 
+ * Just outputs an error and exits.
+ */
+void die(const char *s) {
+    perror(s);
+    exit(1);
+}
+
+/*
+ * Just restores the terminal.
+ */
+void disableRawMode() {
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1)
+        die("tcsetattr");
+}
+
+/*
+ * Disable canonical mode, where each new line is held by the terminal until enter.
+ * ^- This is done so that users can refine their input before sending it to the program, on enter.
+ * This is unwanted, and we're going to "hijack" the terminal.
+ */
+void enableRawMode() {
+    if (tcgetattr(STDIN_FILENO, &orig_termios) == -1) die("tcgetattr"); // Save a version of the terminal before entering "raw" mode. 
+    atexit(disableRawMode); // And restore it once the program exits, no matter what.
+
+    struct termios raw = orig_termios;
+    raw.c_iflag &= ~(ICRNL | IXON); // IXON disables Ctrl-(S,Q) that can temporarily "cut" the flow of data to the terminal.
+    raw.c_oflag &= ~(OPOST); // Disable output processing (\r\n)
+    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG); // ICANON flag which disables "canonical" mode, ISIG disables Ctrl-(C,D,Y).
+    raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+    raw.c_cflag |= (CS8);
+
+    raw.c_cc[VMIN] = 0; // Bytes of input before read() can return anything.
+    raw.c_cc[VTIME] = 1; // Frequency at which read()
+
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr"); // And apply the changes.
+}
+
+
+// --- INIT ---
+
+int main() {
+    enableRawMode();
+
+    while (1) {
+        char c = '\0';
+        if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN) die("read");
+        if (iscntrl(c)) {
+            printf("%d\r\n", c);
+        } else {
+            printf("%d ('%c')\r\n", c, c);
+        }
+        if (c == 'q') break;
+    }
+
+    return 0;
+}
