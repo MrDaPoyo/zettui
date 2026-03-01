@@ -18,6 +18,7 @@
 #include "keys.h"
 #include "zettui.h"
 #include "output.h"
+#include "canvas.h"
 
 struct termios orig_termios;
 
@@ -89,6 +90,7 @@ void editorProcessKeypress() {
 
 int main() {
     enableRawMode();
+    initCanvas();
 
     while (1) {
         editorRefreshScreen();

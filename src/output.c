@@ -1,9 +1,11 @@
 #include <unistd.h>
 #include <stdio.h>
 
+#include "canvas.h"
+
 void editorDrawRows() {
     int y;
-    for (y = 0; y<24; y++) {
+    for (y = 0; y<E.screenrows; y++) {
         char c = '~';
 
         // if (y%2) c = '-';
