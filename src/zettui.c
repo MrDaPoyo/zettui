@@ -29,7 +29,9 @@ struct termios orig_termios;
 void die(const char *s) {
     write(STDOUT_FILENO, "\x1b[2J", 4);
     write(STDOUT_FILENO, "\x1b[H", 3);
-    
+
+    write(STDOUT_FILENO, "\x1b[?1049l", 8); // Disables alternate screen.
+
     perror(s);
     exit(1);
 }
@@ -40,8 +42,8 @@ void die(const char *s) {
 void disableRawMode() {
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1)
         die("tcsetattr");
+    write(STDOUT_FILENO, "\x1b[?1049l", 8); // Disables alternate screen.
 }
-
 /*
  * Disable canonical mode, where each new line is held by the terminal until enter.
  * ^- This is done so that users can refine their input before sending it to the program, on enter.
@@ -52,6 +54,7 @@ void enableRawMode() {
     atexit(disableRawMode); // And restore it once the program exits, no matter what.
 
     struct termios raw = orig_termios;
+    write(STDOUT_FILENO, "\x1b[?1049h", 8); // Alternate screen (MUST BE DISABLED WITH "\033[?1049l")
     raw.c_iflag &= ~(ICRNL | IXON); // IXON disables Ctrl-(S,Q) that can temporarily "cut" the flow of data to the terminal.
     raw.c_oflag &= ~(OPOST); // Disable output processing (\r\n)
     raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG); // ICANON flag which disables "canonical" mode, ISIG disables Ctrl-(C,D,Y).
@@ -76,6 +79,9 @@ void editorProcessKeypress() {
         case CTRL_KEY('q'):
             write(STDOUT_FILENO, "\x1b[2J", 4);
             write(STDOUT_FILENO, "\x1b[H", 3);
+
+            disableRawMode();
+
             exit(0);
             break;
     }
