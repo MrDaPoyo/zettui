@@ -2,6 +2,10 @@
 
 The **ZET**telkasten **TUI** is a little tool I made for myself. It's meant to be used with just a keyboard.
 
+```sh
+pacman -S notcurses
+```
+
 TODO:
 - [ ] Create TUI basic building blocks.
 - [ ] Text editor.
